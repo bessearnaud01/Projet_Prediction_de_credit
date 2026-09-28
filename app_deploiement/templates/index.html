@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prédiction de prêt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg1: #1e3a8a; --bg2: #0f172a; --carte: #ffffff; --texte: #0f172a;
+      --doux: #64748b; --bord: #e2e8f0; --accent: #2563eb; --accent-fonce: #1d4ed8;
+      --ok: #15803d; --ok-fond: #f0fdf4; --ko: #b91c1c; --ko-fond: #fef2f2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 24px 16px; font-family: 'Inter', system-ui, sans-serif; color: var(--texte);
+      background: radial-gradient(circle at top left, var(--bg1), var(--bg2) 70%);
+    }
+    .carte {
+      width: 100%; max-width: 420px; background: var(--carte); border-radius: 16px;
+      padding: 32px 28px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    }
+    .icone {
+      width: 48px; height: 48px; border-radius: 12px; background: #dbeafe;
+      display: grid; place-items: center; font-size: 24px; margin-bottom: 16px;
+    }
+    h1 { margin: 0 0 6px; font-size: 22px; font-weight: 700; }
+    .sous-titre { margin: 0 0 24px; color: var(--doux); font-size: 14px; line-height: 1.5; }
+    .champ { margin-bottom: 18px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .aide { font-weight: 400; color: var(--doux); }
+    select, input {
+      width: 100%; padding: 11px 12px; font: inherit; font-size: 15px; color: var(--texte);
+      background: #f8fafc; border: 1px solid var(--bord); border-radius: 10px; outline: none;
+      transition: border-color .15s, box-shadow .15s, background .15s;
+    }
+    select:focus, input:focus {
+      border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(37, 99, 235, .18);
+    }
+    .choix { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .choix input { position: absolute; opacity: 0; pointer-events: none; }
+    .choix label {
+      margin: 0; padding: 11px; text-align: center; font-weight: 500; font-size: 15px;
+      border: 1px solid var(--bord); border-radius: 10px; background: #f8fafc; cursor: pointer;
+      transition: all .15s;
+    }
+    .choix input:checked + label {
+      border-color: var(--accent); background: #eff6ff; color: var(--accent-fonce);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+    }
+    .choix input:focus-visible + label { outline: 2px solid var(--accent); }
+    .devise { position: relative; }
+    .devise input { padding-right: 36px; }
+    .devise span {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--doux); font-size: 14px;
+    }
+    button {
+      width: 100%; margin-top: 8px; padding: 13px; font: inherit; font-size: 15px; font-weight: 600;
+      color: #fff; background: var(--accent); border: none; border-radius: 10px; cursor: pointer;
+      transition: background .15s, transform .05s;
+    }
+    button:hover { background: var(--accent-fonce); }
+    button:active { transform: translateY(1px); }
+    .resultat {
+      margin-top: 22px; padding: 14px 16px; border-radius: 10px; font-weight: 600; font-size: 15px;
+      line-height: 1.4; border: 1px solid var(--bord); background: #f8fafc;
+    }
+    .resultat.ok { color: var(--ok); background: var(--ok-fond); border-color: #bbf7d0; }
+    .resultat.ko { color: var(--ko); background: var(--ko-fond); border-color: #fecaca; }
+  </style>
+</head>
+
+<body>
+  <main class="carte">
+    <div class="icone" aria-hidden="true">🏦</div>
+    <h1>Prédiction d'octroi de prêt</h1>
+    <p class="sous-titre">Renseignez les informations du demandeur pour estimer si le prêt sera accordé.</p>
+
+    <!-- Les "name" doivent correspondre exactement aux variables du modèle -->
+    <form action="{{ url_for('predict') }}" method="post">
+      <div class="champ">
+        <label for="credit">Historique de crédit</label>
+        <select id="credit" name="Credit_History" required>
+          <option value="" disabled {% if not request.form.Credit_History %}selected{% endif %}>Choisir…</option>
+          <option value="1" {% if request.form.Credit_History == '1' %}selected{% endif %}>Bon — dettes remboursées</option>
+          <option value="0" {% if request.form.Credit_History == '0' %}selected{% endif %}>Mauvais — incidents de paiement</option>
+        </select>
+      </div>
+
+      <div class="champ">
+        <label>Marié(e) ?</label>
+        <div class="choix">
+          <input type="radio" id="marie-oui" name="Married" value="Yes" required
+                 {% if request.form.Married == 'Yes' %}checked{% endif %}>
+          <label for="marie-oui">Oui</label>
+          <input type="radio" id="marie-non" name="Married" value="No"
+                 {% if request.form.Married == 'No' %}checked{% endif %}>
+          <label for="marie-non">Non</label>
+        </div>
+      </div>
+
+      <div class="champ">
+        <label for="revenu">Revenu du co-emprunteur <span class="aide">(0 si aucun)</span></label>
+        <div class="devise">
+          <input id="revenu" type="number" name="CoapplicantIncome" min="0" step="any"
+                 placeholder="ex. 1500" value="{{ request.form.CoapplicantIncome }}" required>
+          <span>$</span>
+        </div>
+      </div>
+
+      <button type="submit">Prédire</button>
+    </form>
+
+    {% if prediction_text %}
+      <div class="resultat {% if 'accordé' in prediction_text %}ok{% elif 'refusé' in prediction_text %}ko{% endif %}" role="status">
+        {% if 'accordé' in prediction_text %}✅{% elif 'refusé' in prediction_text %}❌{% endif %}
+        {{ prediction_text }}
+      </div>
+    {% endif %}
+  </main>
+</body>
+</html>
